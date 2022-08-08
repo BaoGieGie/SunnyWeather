@@ -1,5 +1,6 @@
 package com.sunnyweather.android.ui.place
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -15,6 +16,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.sunnyweather.android.MainActivity
 import com.sunnyweather.android.R
+import com.sunnyweather.android.ui.weather.WeatherActivity
 
 class PlaceFragment : Fragment() {
     //首先，使用lazy函数这种懒加载技术来获取PlaceViewModel的实例，这是一种非常棒的写法，允许在整个类中随时使用viewModel这个变量，而完全不用关心它何时初始化、是否为空等前提条件。
@@ -38,6 +40,20 @@ class PlaceFragment : Fragment() {
     //最后onActivityCreated()方法，先给RecyclerView设置LayoutManager和适配器，并使用PlaceViewModel中的placeList集合作为数据源
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
+        //在PlaceFragment中进行判断，如果当前已有存储的城市数据，那么就获取已存储的数据并解析成Place对象，
+        // 然后使用它的经纬度坐标和城市名直接跳转并传递给WeatherActivity，这样用户就不需要每次都重新搜索并选择城市了
+        if (viewModel.isPlaceSaved()) {
+            val place = viewModel.getSavedPlace()
+            val intent = Intent(context, WeatherActivity::class.java).apply {
+                putExtra("location_lng", place.location.lng)
+                putExtra("location_lat", place.location.lat)
+                putExtra("place_name", place.name)
+            }
+            startActivity(intent)
+            activity?.finish()
+            return
+        }
+
         if (activity != null) mainActivity = activity as MainActivity
         recyclerView = mainActivity.findViewById<RecyclerView>(R.id.recyclerView)
         searchPlaceEdit = mainActivity.findViewById(R.id.searchPlaceEdit)

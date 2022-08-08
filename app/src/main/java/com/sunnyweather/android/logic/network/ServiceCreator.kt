@@ -14,7 +14,7 @@ object ServiceCreator {
         .build()
 
     fun <T> create(serviceClass: Class<T>): T = retrofit.create(serviceClass)       //调用Retrofit对象的create()方法创建PlaceService接口的动态代理对象，有此对象后可以随意调用接口中定义的所有方法
-                                                                                    //该方法的使用： ServiceCreator.create(PlaceService::class.java)
+                                                                                    //该方法的使用： ServiceCreator.create(T::class.java)
 
-    inline fun <reified T> create(): T = create(T::class.java)                //利用泛型实化  该方法的使用： ServiceCreator.create<PlaceService>()
+    inline fun <reified T> create(): T = create(T::class.java)                //利用泛型实化  该方法的使用： ServiceCreator.create<T>()
 }
