@@ -1,13 +1,18 @@
 package com.sunnyweather.android.ui.weather
 
+import android.content.Context
 import android.graphics.Color
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
+import android.view.inputmethod.InputMethodManager
 import android.widget.*
+import androidx.core.view.GravityCompat
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.sunnyweather.android.R
 import com.sunnyweather.android.logic.model.Weather
 import com.sunnyweather.android.logic.model.getSky
@@ -28,6 +33,9 @@ class WeatherActivity : AppCompatActivity() {
     lateinit var ultravioletText:TextView
     lateinit var carWashingText:TextView
     lateinit var weatherLayout:ScrollView
+    lateinit var swipeRefresh: SwipeRefreshLayout
+    lateinit var navBtn:Button
+    lateinit var drawerLayout:DrawerLayout
 
     /**
      * 在onCreate()方法中，首先从Intent中取出经纬度坐标和地区名称，并赋值到WeatherViewModel的相应变量中；
@@ -56,6 +64,28 @@ class WeatherActivity : AppCompatActivity() {
         ultravioletText = findViewById(R.id.ultravioletText)
         carWashingText = findViewById(R.id.carWashingText)
         weatherLayout = findViewById(R.id.weatherLayout)
+        swipeRefresh = findViewById(R.id.swipeRefresh)
+        navBtn = findViewById(R.id.navBtn)
+        drawerLayout = findViewById(R.id.drawerLayout)
+
+        /**
+         * 做两件事：第一，在切换城市按钮的点击事件中调用DrawerLayout的openDrawer()方法来打开滑动菜单；
+         * 第二，监听DrawerLayout的状态，当滑动菜单被隐藏的时候，同时也要隐藏输入法。
+         * 之所以要做这样一步操作，是因为在滑动菜单中搜索城市时会弹出输入法，而如果滑动菜单隐藏后输入法却还显示在界面上，就会是一种非常怪异的情况。
+         */
+        navBtn.setOnClickListener {
+            drawerLayout.openDrawer(GravityCompat.START)
+        }
+        drawerLayout.addDrawerListener(object : DrawerLayout.DrawerListener {
+            override fun onDrawerStateChanged(newState: Int) {}
+            override fun onDrawerSlide(drawerView: View, slideOffset: Float) {}
+            override fun onDrawerOpened(drawerView: View) {}
+
+            override fun onDrawerClosed(drawerView: View) {
+                val manager = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                manager.hideSoftInputFromWindow(drawerView.windowToken, InputMethodManager.HIDE_NOT_ALWAYS)
+            }
+        })
 
         if (viewModel.locationLng.isEmpty()) {
             viewModel.locationLng = intent.getStringExtra("location_lng") ?: ""
@@ -66,7 +96,7 @@ class WeatherActivity : AppCompatActivity() {
         if (viewModel.placeName.isEmpty()) {
             viewModel.placeName = intent.getStringExtra("place_name") ?: ""
         }
-        viewModel.weatherLiveData.observe(this, Observer { result ->
+        /*viewModel.weatherLiveData.observe(this, Observer { result ->
             val weather = result.getOrNull()
             if (weather != null) {
                 showWeatherInfo(weather)
@@ -75,7 +105,30 @@ class WeatherActivity : AppCompatActivity() {
                 result.exceptionOrNull()?.printStackTrace()
             }
         })
-        viewModel.refreshWeather(viewModel.locationLng, viewModel.locationLat)
+        viewModel.refreshWeather(viewModel.locationLng, viewModel.locationLat)*/
+
+        /**
+         * 修改的代码，首先将之前用于刷新天气信息的代码提取到了一个新的refreshWeather()方法中，在里面调用WeatherViewModel的refreshWeather()方法，
+         * 并将SwipeRefreshLayout的isRefreshing属性设置成true，从而让下拉刷新进度条显示出来。
+         * 然后在onCreate()方法中调用SwipeRefreshLayout的setColorSchemeResources()方法，来设置下拉刷新进度条的颜色，使用colors.xml中的colorPrimary作为进度条的颜色。
+         * 接着调用setOnRefreshListener()方法给SwipeRefreshLayout设置一个下拉刷新的监听器，当触发了下拉刷新操作的时候，就在监听器的回调中调用refreshWeather()方法来刷新天气信息。
+         * 另外，当请求结束后，还需要将SwipeRefreshLayout的isRefreshing属性设置成false，用于表示刷新事件结束，并隐藏刷新进度条
+         */
+        viewModel.weatherLiveData.observe(this, Observer { result ->
+            val weather = result.getOrNull()
+            if (weather != null) {
+                showWeatherInfo(weather)
+            } else {
+                Toast.makeText(this, "无法成功获取天气信息", Toast.LENGTH_SHORT).show()
+                result.exceptionOrNull()?.printStackTrace()
+            }
+            swipeRefresh.isRefreshing = false              //当请求结束后，还需要将SwipeRefreshLayout的isRefreshing属性设置成false，用于表示刷新事件结束，并隐藏刷新进度条
+        })
+        swipeRefresh.setColorSchemeResources(R.color.colorPrimary)      //设置下拉刷新进度条的颜色
+        refreshWeather()
+        swipeRefresh.setOnRefreshListener {
+            refreshWeather()
+        }
     }
 
     /**
@@ -127,5 +180,9 @@ class WeatherActivity : AppCompatActivity() {
         ultravioletText.text = lifeIndex.ultraviolet[0].desc
         carWashingText.text = lifeIndex.carWashing[0].desc
         weatherLayout.visibility = View.VISIBLE
+    }
+    fun refreshWeather() {
+        viewModel.refreshWeather(viewModel.locationLng, viewModel.locationLat)
+        swipeRefresh.isRefreshing = true            //将SwipeRefreshLayout的isRefreshing属性设置成true，从而让下拉刷新进度条显示出来
     }
 }

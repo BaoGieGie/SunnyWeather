@@ -40,9 +40,27 @@ class PlaceFragment : Fragment() {
     //最后onActivityCreated()方法，先给RecyclerView设置LayoutManager和适配器，并使用PlaceViewModel中的placeList集合作为数据源
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
-        //在PlaceFragment中进行判断，如果当前已有存储的城市数据，那么就获取已存储的数据并解析成Place对象，
-        // 然后使用它的经纬度坐标和城市名直接跳转并传递给WeatherActivity，这样用户就不需要每次都重新搜索并选择城市了
+
+        /**
+         * 在PlaceFragment中进行判断，如果当前已有存储的城市数据，那么就获取已存储的数据并解析成Place对象，
+        然后使用它的经纬度坐标和城市名直接跳转并传递给WeatherActivity，这样用户就不需要每次都重新搜索并选择城市了
         if (viewModel.isPlaceSaved()) {
+        val place = viewModel.getSavedPlace()
+        val intent = Intent(context, WeatherActivity::class.java).apply {
+        putExtra("location_lng", place.location.lng)
+        putExtra("location_lat", place.location.lat)
+        putExtra("place_name", place.name)
+        }
+        startActivity(intent)
+        activity?.finish()
+        return
+        }*/
+
+        /**
+         * 之前在PlaceFragment中做过一个数据存储状态的判断，假如已经有选中的城市保存在SharedPreferences文件中，那么就直接跳转到WeatherActivity。
+         * 但是现在将PlaceFragment嵌入WeatherActivity中之后，如果还执行这段逻辑肯定是不行的，因为这会造成无限循环跳转的情况
+         * 这里又多做了一层逻辑判断，只有当PlaceFragment被嵌入MainActivity中，并且之前已经存在选中的城市，此时才会直接跳转到WeatherActivity，这样就可以解决无限循环跳转的问题*/
+        if (activity is MainActivity && viewModel.isPlaceSaved()) {
             val place = viewModel.getSavedPlace()
             val intent = Intent(context, WeatherActivity::class.java).apply {
                 putExtra("location_lng", place.location.lng)
