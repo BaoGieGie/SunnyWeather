@@ -24,7 +24,6 @@ class PlaceFragment : Fragment() {
 
     private lateinit var adapter: PlaceAdapter
 
-    private lateinit var mainActivity: MainActivity
     private lateinit var recyclerView: RecyclerView
     private lateinit var searchPlaceEdit: EditText
     private lateinit var bgImageView: ImageView
@@ -72,10 +71,9 @@ class PlaceFragment : Fragment() {
             return
         }
 
-        if (activity != null) mainActivity = activity as MainActivity
-        recyclerView = mainActivity.findViewById<RecyclerView>(R.id.recyclerView)
-        searchPlaceEdit = mainActivity.findViewById(R.id.searchPlaceEdit)
-        bgImageView = mainActivity.findViewById(R.id.bgImageView)
+        recyclerView = activity?.findViewById<RecyclerView>(R.id.recyclerView)!!
+        searchPlaceEdit = activity?.findViewById(R.id.searchPlaceEdit)!!
+        bgImageView = activity?.findViewById(R.id.bgImageView)!!
 
         val layoutManager = LinearLayoutManager(activity)
         recyclerView.layoutManager = layoutManager
@@ -101,18 +99,20 @@ class PlaceFragment : Fragment() {
         //  这里对PlaceViewModel中的placeLiveData对象进行观察，当有任何数据变化时，就会回调到传入的Observer接口实现中
         //  然后对回调的数据进行判断：如果数据不为空，那么就将这些数据添加到PlaceViewModel的placeList集合中，并通知PlaceAdapter刷新界面；
         //  如果数据为空，则说明发生了异常，此时弹出一个Toast提示，并将具体的异常原因打印出来
-        viewModel.placeLiveData.observe(mainActivity, Observer { result ->
-            val places = result.getOrNull()
-            if (places != null) {
-                recyclerView.visibility = View.VISIBLE
-                bgImageView.visibility = View.GONE
-                viewModel.placeList.clear()
-                viewModel.placeList.addAll(places)
-                adapter.notifyDataSetChanged()
-            } else {
-                Toast.makeText(activity, "未能查询到任何地点", Toast.LENGTH_SHORT).show()
-                result.exceptionOrNull()?.printStackTrace()
-            }
-        })
+        getActivity()?.let {
+            viewModel.placeLiveData.observe(it, Observer { result ->
+                val places = result.getOrNull()
+                if (places != null) {
+                    recyclerView.visibility = View.VISIBLE
+                    bgImageView.visibility = View.GONE
+                    viewModel.placeList.clear()
+                    viewModel.placeList.addAll(places)
+                    adapter.notifyDataSetChanged()
+                } else {
+                    Toast.makeText(activity, "未能查询到任何地点", Toast.LENGTH_SHORT).show()
+                    result.exceptionOrNull()?.printStackTrace()
+                }
+            })
+        }
     }
 }
